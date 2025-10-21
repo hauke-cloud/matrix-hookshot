@@ -148,6 +148,7 @@ hookshot:
         bindAddress: 0.0.0.0
         resources:
           - widgets
+
   registration:
     #github:
     #  # (Optional) Configure this to enable GitHub support
