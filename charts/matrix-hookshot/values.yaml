@@ -149,7 +149,6 @@ hookshot:
         resources:
           - widgets
 
-  registration:
     #github:
     #  # (Optional) Configure this to enable GitHub support
     #  auth:
@@ -297,6 +296,8 @@ hookshot:
     #    services:
     #      - service: "*"
     #        level: admin
+
+  registration:
     id: matrix-hookshot
     as_token: ""
     hs_token: ""
