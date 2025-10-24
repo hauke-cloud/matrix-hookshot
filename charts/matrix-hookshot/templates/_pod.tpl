@@ -43,10 +43,14 @@ containers:
 {{- toYaml .Values.containerSecurityContext | nindent 6 }}
 {{- end }}
     volumeMounts:
-{{- if or (and (not .Values.hookshot.existingConfigMap) (.Values.hookshot.config)) (.Values.hookshot.existingConfigMap) }}
+      {{- if or (and (not .Values.hookshot.existingConfigMap) (.Values.hookshot.config)) (.Values.hookshot.existingConfigMap) }}
       - name: config
         mountPath: "/data"
-{{- end }}
+      {{- end }}
+      {{- range .Values.extraVolumeMounts }}
+      - name: {{ .name }}
+        mountPath: {{ .mountPath }}
+      {{- end }}
     ports:
       - name: webhook
         containerPort: 9000
