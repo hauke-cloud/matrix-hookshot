@@ -90,7 +90,7 @@ spec:
       {{- if .Values.hookshot.existingSecret }}
         - name: config
           secret:
-            secretName: {{ . }}
+            secretName: {{ .Values.hookshot.existingSecret }}
       {{- else if .Values.hookshot.config }}
         - name: config
           secret:
