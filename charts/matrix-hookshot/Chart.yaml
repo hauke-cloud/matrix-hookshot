@@ -3,10 +3,10 @@ apiVersion: v2
 name: matrix-hookshot
 description: Deploy a Matrix Hookshot instance to Kubernetes
 type: application
-version: 0.1.16
+version: 0.0.1
 appVersion: "7.2.0"
 dependencies:
   - name: redis
-    version: "23.2.1"
-    repository: https://charts.bitnami.com/bitnami
+    version: 23.1.7
+    repository: oci://registry-1.docker.io/bitnamicharts
     condition: encryption.enabled
