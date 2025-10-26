@@ -12,5 +12,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "hookshot.fullname" . }}:{{ .Values.service.webhook.port }}']
+      args: ['{{ include "hookshot.fullname" . }}:{{ .Values.service.ports.webhook.port }}']
   restartPolicy: Never

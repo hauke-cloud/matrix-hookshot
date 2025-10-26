@@ -1,0 +1,138 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "hookshot.fullname" . }}
+  labels:
+    {{- include "hookshot.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "hookshot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "hookshot.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "hookshot.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.service.ports }}
+          ports:
+          {{- range $key, $value := .Values.service.ports }}
+            - name: {{ $key }}
+              containerPort: {{ $value.containerPort }}
+              protocol: {{ $value.protocol | default "TCP" }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+          {{- if or (and (not .Values.hookshot.existingSecret) (.Values.hookshot.config)) (.Values.hookshot.existingSecret) }}
+            - name: config
+              mountPath: "/data"
+          {{- end }}
+          {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.envFromSecrets .Values.envFromConfigMaps }}
+          envFrom:
+          {{- range .Values.envFromSecrets }}
+            - secretRef:
+                name: {{ .name }}
+                optional: {{ .optional | default false }}
+          {{- end }}
+          {{- range .Values.envFromConfigMaps }}
+            - configMapRef:
+                name: {{ .name }}
+                optional: {{ .optional | default false }}
+          {{- end }}
+          {{- end }}
+      volumes:
+      {{- if .Values.hookshot.existingSecret }}
+        - name: config
+          secret:
+            secretName: {{ . }}
+      {{- else if .Values.hookshot.config }}
+        - name: config
+          secret:
+            secretName: {{ include "hookshot.fullname" . }}-config
+      {{- end }}
+      {{- range .Values.extraVolumes }}
+        - name: {{ .name }}
+          {{- with .configMap }}
+          configMap:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .secret }}
+          secret:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .existingClaim }}
+          persistentVolumeClaim:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .hostPath }}
+          hostPath:
+          {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .emptyDir }}
+          emptyDir: {}
+          {{- end }}
+      {{- end }}
+  {{- if .Values.hookshot.encryption.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: hookshot-encryption-storage
+        labels:
+          {{- include "hookshot.labels" . | nindent 10 }}
+      spec:
+        {{- with .Values.hookshot.encryption.persistence }}
+        {{- with .accessModes }}
+        accessModes:
+        {{- toYaml . | nindent 10 }}
+        {{- end }}
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: {{ .storageSize }}
+        {{- end }}
+  {{- end }}

@@ -3,30 +3,32 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "hookshot.fullname" . }}
-  namespace: {{ template "hookshot.namespace" . }}
-{{- with .Values.service.annotations }}
+  {{- with .Values.service.annotations }}
   annotations:
-{{ toYaml . | indent 4 }}
-{{- end }}
+    {{ toYaml . | indent 4 }}
+  {{- end }}
   labels:
     {{- include "hookshot.labels" . | nindent 4 }}
-{{- with .Values.service.labels }}
-{{ toYaml . | indent 4 }}
-{{- end }}
+  {{- with .Values.service.labels }}
+    {{ toYaml . | indent 4 }}
+  {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  {{- with .Values.service }}
+  {{- with .type }}
+  type: {{ . }}
+  {{- end }}
+  {{- with .loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- if .ports }}
   ports:
-    - port: {{ .Values.service.webhook.port }}
-      targetPort: webhook
-      protocol: TCP
-      name: webhook
-    - port: {{ .Values.service.metrics.port }}
-      targetPort: metrics
-      protocol: TCP
-      name: metrics
-    - port: {{ .Values.service.appservice.port }}
-      targetPort: appservice
-      protocol: TCP
-      name: appservice
+  {{- range $key, $value := .ports }}
+    - name: {{ $key }}
+      port: {{ $value.port }}
+      targetPort: {{ $key }}
+      protocol: {{ $value.type }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
   selector:
     {{- include "hookshot.selectorLabels" . | nindent 4 }}

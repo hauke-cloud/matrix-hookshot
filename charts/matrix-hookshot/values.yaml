@@ -1,116 +1,188 @@
 ---
-# Note: This chart is released using the config.sample.yml file
-#
-# -- Number of replicas to deploy. Consequences of using multiple Hookshot replicas currently unknown.
+# Default values for test.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  # -- Repository to pull hookshot image from
   repository: halfshot/matrix-hookshot
-  # -- Pull policy for Hookshot image
+  # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # -- Image tag to pull. Defaults to chart's appVersion value as set in Chart.yaml
-  tag:
-# -- List of names of k8s secrets to be used as ImagePullSecrets for the pod
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
-# -- Name override for helm chart
+# This is to override the chart name.
 nameOverride: ""
-# -- Full name override for helm chart
 fullnameOverride: ""
+
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
-  # -- Specifies whether a service account should be created
+  # Specifies whether a service account should be created
   create: true
-  # -- Annotations to add to the service account
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
   annotations: {}
-  # -- The name of the service account to use. If not set and create is true, a name is generated using the fullname template
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
   name: ""
-# -- Extra annotations for Hookshot pod
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 podAnnotations: {}
-# -- Pod security context settings
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+
+# podSecurityContext:
+#   fsGroup: 2000
 podSecurityContext: {}
-# fsGroup: 2000
 
-# -- Security context settings
+# securityContext:
+#   capabilities:
+#     drop:
+#     - ALL
+#   readOnlyRootFilesystem: true
+#   runAsNonRoot: true
+#   runAsUser: 1000
 securityContext: {}
-# capabilities:
-#   drop:
-#   - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
 
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
-  # -- Service type for Hookshot service
+  # Type of the service
   type: ClusterIP
-  # -- Port for Hookshot service
-  port: 80
-  # -- Extra annotations for service
-  annotations: {}
-  # -- Extra labels for service
-  labels: {}
-  webhook:
-    # -- Webhook port as configured in container
-    port: 9000
-  metrics:
-    # -- Metrics port as configured in container
-    port: 9001
-  appservice:
-    # -- Appservice port as configured in container
-    port: 9002
 
+  # Fixed ip address of the load balancer
+  # loadbalancerIP: ""
+
+  # Extra annotations for service
+  annotations: {}
+
+  # Extra labels for service
+  labels: {}
+
+  ports:
+    # Webhook port as configured in container
+    webhook:
+      port: 9000
+      containerPort: 9000
+      protocol: TCP
+
+    # Metrics port as configured in container
+    metrics:
+      port: 9001
+      containerPort: 9001
+      protocol: TCP
+
+    # Appservice port as configured in container
+    appservice:
+      port: 9002
+      containerPort: 9002
+      protocol: TCP
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
   webhook:
-    # -- Enable ingress for webhook
+    # Enable ingress for webhook
     enabled: false
-    # -- Ingress class name for webhook ingress
+    # Ingress class name for webhook ingress
     className: ""
-    # -- Annotations for webhook ingress
+    # Annotations for webhook ingress
     annotations: {}
-    # -- Host configuration for webhook ingress
+    # Host configuration for webhook ingress
     hosts: []
-    # -- TLS configuration for webhook ingress
+    # TLS configuration for webhook ingress
     tls: []
   appservice:
-    # -- Enable ingress for appservice
+    # Enable ingress for appservice
     enabled: false
-    # -- Ingress class name for appservice ingress
+    # Ingress class name for appservice ingress
     className: ""
-    # -- Annotations for appservice ingress
+    # Annotations for appservice ingress
     annotations: {}
-    # -- Host configuration for appservice ingress
+    # Host configuration for appservice ingress
     hosts: []
-    # -- TLS configuration for appservice ingress
+    # TLS configuration for appservice ingress
     tls: []
 
-# -- Pod resource requests / limits
-resources: {}
 # We usually recommend not to specify default resources and to leave this as a conscious
 # choice for the user. This also increases chances charts run on environments with little
 # resources, such as Minikube. If you do want to specify resources, uncomment the following
 # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-# limits:
-#   cpu: 100m
-#   memory: 128Mi
-# requests:
-#   cpu: 100m
-#   memory: 128Mi
+# resources:
+#   limits:
+#     cpu: 100m
+#     memory: 128Mi
+#   requests:
+#     cpu: 100m
+#     memory: 128Mi
+resources: {}
 
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+
+# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
   enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
 
-# -- Node selector parameters
+# Additional volumes mounted to the StatefulSet.
+# extraVolumes:
+# - name: foo
+#   persistentVolumeClaim:
+#     claimName: mysecret
+# - name: foo
+#   hostPath: example
+# - name: foo
+extraVolumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
 nodeSelector: {}
 
-# -- Tolerations for deployment
 tolerations: []
 
-# -- Affinity settings for deployment
 affinity: {}
 
+# Redis settings
+# Valid if encryption.enabled: true
+# redis: {}
+
 hookshot:
-  # -- Name of existing ConfigMap with valid Hookshot configuration
+  # Name of existing ConfigMap with valid Hookshot configuration
   existingSecret: {}
 
-  # -- Raw Hookshot configuration. Gets templated into a YAML file and then loaded unless an existingConfigMap is specified.
+  # Enable encryption support
+  # Means we will start a redis cluster and create pvc for the persistent state
+  encryption:
+    enabled: false
+
+    persistence:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: default
+      storageSize: 10Gi
+
+  # Raw Hookshot configuration. Gets templated into a YAML file and then loaded unless an existingConfigMap is specified.
   config:
     # This is an example configuration file
     bridge:
