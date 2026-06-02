@@ -22,11 +22,12 @@ spec:
   {{- end }}
   {{- if .ports }}
   ports:
-  {{- range $key, $value := .ports }}
-    - name: {{ $key }}
-      port: {{ $value.port }}
-      targetPort: {{ $key }}
-      protocol: {{ $value.type }}
+  {{- range .ports | keys | sortAlpha }}
+  {{- $val := get $.Values.service.ports . }}
+    - name: {{ . }}
+      port: {{ $val.port }}
+      targetPort: {{ . }}
+      protocol: {{ $val.protocol | default "TCP" }}
   {{- end }}
   {{- end }}
   {{- end }}
