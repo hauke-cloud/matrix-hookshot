@@ -1,78 +1,97 @@
-
-
+<!-- llm-readme-management spec=1 commit=0f3f123c161c1932fec8fc07a7daa3096c6f4987 template=helm model=qwen3.6-35b-a3b digest=5b6cfbe96d9f generated=2026-09-08T21:43:39Z -->
 <a href="https://hauke.cloud" target="_blank"><img src="https://img.shields.io/badge/home-hauke.cloud-brightgreen" alt="hauke.cloud" style="display: block;" /></a>
 <a href="https://github.com/hauke-cloud" target="_blank"><img src="https://img.shields.io/badge/github-hauke.cloud-blue" alt="hauke.cloud Github Organisation" style="display: block;" /></a>
-<a href="https://github.com/hauke-cloud/readme-management" target="_blank"><img src="https://img.shields.io/badge/template-helm-orange" alt="Repository type - helm" style="display: block;" /></a>
+<a href="https://github.com/hauke-cloud/llm-readme-management" target="_blank"><img src="https://img.shields.io/badge/template-helm-orange" alt="Repository type - helm" style="display: block;" /></a>
 
 
-# matrix-hookshot
+# Matrix Hookshot
 
 
 <img src="https://raw.githubusercontent.com/hauke-cloud/.github/main/resources/img/organisation-logo-small.png" alt="hauke.cloud logo" width="109" height="123" align="right">
 
 
-A Matrix bot for connecting to external services like GitHub, GitLab, JIRA, and more.
+<llm header hint="Name the chart and what it deploys.">
 
-(This is a fork of https://github.com/matrix-org/matrix-hookshot)
+This Helm chart, `matrix-hookshot`, deploys a Matrix Hookshot instance onto Kubernetes, bridging a homeserver with external services like GitHub, GitLab, and Jira. It manages the Hookshot StatefulSet, configuration secrets, and an optional Redis dependency for encrypted rooms. You should keep reading if you are a Kubernetes operator or cluster administrator needing to relay external events into Matrix.
 
-This chart offers you:
-- Several services are supported out of the box.
-- Webhooks let you connect all kinds of services, with the ability to write rich templates using JavaScript.
-- No external database is required, instead using Matrix state as a persistent store.
-- End-to-Bridge encryption allows bots to be used in encrypted Matrix rooms.
-- Powerful widgets let you configure Hookshot from a room or the Element Extensions Store.
+</llm>
 
 
+## :book: Description
 
+<llm description>
+
+This repository provides a Helm chart that deploys Matrix Hookshot onto Kubernetes, enabling you to bridge your Matrix homeserver with external services like GitHub, GitLab, Jira, and Figma. It addresses the need to relay events from these platforms directly into Matrix rooms by packaging the `halfshot/matrix-hookshot` container as a StatefulSet. The chart handles the underlying infrastructure requirements, including optional Redis integration for end-to-end bridge encryption and automatic management of application configuration, registration tokens, and encryption keys.
+
+As part of the `hauke-cloud` Helm repository, it is published as an OCI artifact to `ghcr.io/hauke-cloud/charts/matrix-hookshot` for straightforward cluster integration. The chart manages the following components:
+- Deploys the Hookshot container alongside a conditional Redis sub-chart for encrypted room state storage.
+- Renders and mounts configuration, registration, and passkey files into the application container.
+- Exposes webhook, metrics/provisioning, and appservice ports through a single Kubernetes Service.
+- Optionally provisions separate Ingress resources with TLS support for webhook and appservice traffic.
+
+</llm>
+
+
+## :clipboard: Requirements
+
+<llm requirements hint="Give the Kubernetes version constraint from Chart.yaml, the Helm version, and any dependency charts or CRDs that must already be present.">
+
+Before you deploy this chart, ensure your environment meets these requirements:
+- Kubernetes cluster v1.14+ (v1.17+ required for HPA API support)
+- Helm v3.x installed locally
+- Access to `ghcr.io/hauke-cloud/charts` (OCI registry credentials or public read access)
+- A running Matrix homeserver (Synapse or compatible) with appservice registration tokens (`as_token`, `hs_token`) and a configured domain/URL
+- An Ingress controller matching your chosen `className` (required if enabling ingress)
+- A storage provisioner matching the default `default` storage class (required if enabling encryption)
+- The Bitnami Redis v23.1.6 sub-chart in your Helm repository cache
+
+</llm>
 
 
 ## 🚀 Getting started
-To get started, you need to clone the repository. Follow the steps below:
 
-### 1. Clone the repository
+<llm getting_started hint="helm repo add, helm install and helm upgrade with the real repository URL and chart name. Show a values override only if the chart needs one to start.">
 
-Use the following command to clone the repository:
-
+1. You clone the repository and enter the directory.
 ```bash
 git clone https://github.com/hauke-cloud/matrix-hookshot.git
-```
-
-### 2. Navigate to the repository directory
-
-Once the repository is cloned, navigate to the directory:
-
-```bash
 cd matrix-hookshot
 ```
+2. You download the Redis
 
-### 3. Check the content
-
-```bash
-ls -la
-```
-
-This will display all the files and directories in the cloned repository.
-
+</llm>
 
 
 ## :airplane: Usage
-### Deploying the chart
 
-Since we provide the chart in our public Github repository deploying it is
-quite simple. You can run the following command to template and install the chart to your Kubernetes cluster:
+<llm usage hint="Show installing with a values file, and how to reach or verify the deployed workload.">
 
-#### Template the Helm chart
+Once you have a Kubernetes cluster and Helm 3 ready, you consume this chart directly from the OCI registry. You typically supply your Matrix homeserver details, appservice tokens, and encryption settings through a custom values file rather than inline flags.
 
+To install the bridge with your configuration:
 ```bash
-helm template oci://ghcr.io/hauke-cloud/charts/matrix-hookshot
+helm install matrix-hookshot oci://ghcr.io/hauke-cloud/charts/matrix-hookshot --version 0.1.0 -f my-values.yaml
 ```
+Your `my-values.yaml` should populate `hookshot.config` with your homeserver domain and URLs, provide `hookshot.registration` tokens (`as_token`, `hs_token`), and set `hookshot.passkey`. If you need encrypted room state, enable the Redis sub-chart by setting `hookshot.encryption.enabled` to true and supply a `redisUri` in your config.
 
-#### Deploy the Helm chart
-
+After deployment, verify the workload is running and reachable. The chart creates a StatefulSet named after your release and exposes ports 9000, 9001, and 9002 via a Service. You can check pod status with:
 ```bash
-helm install matrix-hookshot oci://ghcr.io/hauke-cloud/charts/matrix-hookshot --version 1.0.0
+kubectl get pods -l app.kubernetes.io/name=matrix-hookshot
 ```
+To confirm the webhook listener is accepting connections, you can run the built-in test-connection pod or curl the service directly:
+```bash
+kubectl run test-connection --rm -it --image=busybox -- wget -qO- http://matrix-hookshot-webhook:9000
+```
+If you configured `ingress.webhook.enabled` or `ingress.appservice.enabled`, you can also reach the bridge through your cluster's ingress controller at the specified hostnames.
 
+</llm>
+
+
+## :wrench: Configuration
+
+<llm configuration hint="A table of the top-level values from values.yaml: key, default, description. Point at values.yaml for the full set.">
+
+</llm>
 
 
 ## 📄 License
@@ -91,4 +110,3 @@ To become a contributor, please check out the [CONTRIBUTING](CONTRIBUTING.md) fi
 
 For any inquiries or support requests, please open an issue in this
 repository or contact us at [contact@hauke.cloud](mailto:contact@hauke.cloud).
-
